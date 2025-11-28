@@ -16,3 +16,6 @@ flyway:
   enabled: true
   locations: classpath:db/migrations
   baseline-on-migrate: true
+
+limit-service:
+  default-limit: 100000.00
