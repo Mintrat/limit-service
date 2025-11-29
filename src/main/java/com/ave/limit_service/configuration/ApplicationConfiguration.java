@@ -10,4 +10,7 @@ public class ApplicationConfiguration {
 
     @Value("${limit-service.default-limit}")
     private double defaultLimit;
+
+    @Value("${limit-service.reservation-timeout-minutes}")
+    private int reservationTimeoutMinutes;
 }

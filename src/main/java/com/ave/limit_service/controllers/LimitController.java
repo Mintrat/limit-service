@@ -1,7 +1,9 @@
 package com.ave.limit_service.controllers;
 
-import com.ave.limit_service.requests.WithdrawRequestDto;
-import com.ave.limit_service.response.UserDto;
+import com.ave.limit_service.dto.LimitReservationDto;
+import com.ave.limit_service.dto.ReservationDto;
+import com.ave.limit_service.dto.WithdrawDto;
+import com.ave.limit_service.dto.UserDto;
 import com.ave.limit_service.services.LimitService;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +21,12 @@ public class LimitController {
     }
 
     @PostMapping("/limit/withdraw")
-    public void withdraw(@RequestBody WithdrawRequestDto request) {
+    public void withdraw(@RequestBody WithdrawDto request) {
         limitService.withdraw(request);
+    }
+
+    @PostMapping("/reservation")
+    public LimitReservationDto reservation(@RequestBody ReservationDto request) {
+        return limitService.reservation(request);
     }
 }

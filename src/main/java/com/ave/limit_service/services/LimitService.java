@@ -1,59 +1,62 @@
 package com.ave.limit_service.services;
 
 import com.ave.limit_service.configuration.ApplicationConfiguration;
-import com.ave.limit_service.entities.UserEntity;
+import com.ave.limit_service.dto.LimitReservationDto;
+import com.ave.limit_service.dto.ReservationDto;
+import com.ave.limit_service.dto.WithdrawDto;
+import com.ave.limit_service.dto.UserDto;
+import com.ave.limit_service.enums.LimitReservationStatus;
 import com.ave.limit_service.exception.LimitExceededException;
-import com.ave.limit_service.repositories.UserRepository;
-import com.ave.limit_service.requests.WithdrawRequestDto;
-import com.ave.limit_service.response.UserDto;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 public class LimitService {
 
-    private final UserRepository userRepository;
+    final private UserLimitService userLimitService;
+    final private LimitReservationsService limitReservationsService;
+    final private ApplicationConfiguration applicationConfiguration;
 
-    private final ApplicationConfiguration applicationConfiguration;
-
-    public LimitService(UserRepository userRepository, ApplicationConfiguration applicationConfiguration) {
-        this.userRepository = userRepository;
+    public LimitService(
+            UserLimitService userLimitService,
+            LimitReservationsService limitReservationsService,
+            ApplicationConfiguration applicationConfiguration
+    ) {
+        this.userLimitService = userLimitService;
+        this.limitReservationsService = limitReservationsService;
         this.applicationConfiguration = applicationConfiguration;
     }
 
     public UserDto findUser(String userId) {
-        return userRepository
-                .findById(userId)
-                .map(user -> new UserDto(
-                        user.getUserId(),
-                        user.getCurrentLimit(),
-                        user.getReservedAmount()
-                )).orElseGet(() -> createUser(userId));
+        return userLimitService.findUser(userId);
     }
 
-    public UserDto createUser(String userID) {
-        UserEntity userEntity = new UserEntity();
-        userEntity.setUserId(userID);
-        userEntity.setCurrentLimit(applicationConfiguration.getDefaultLimit());
-        userEntity.setReservedAmount(0.00);
-
-        userRepository.save(userEntity);
-
-        return new UserDto(userEntity.getUserId(), userEntity.getCurrentLimit(), userEntity.getReservedAmount());
+    public void withdraw(WithdrawDto withdrawDto) {
+        userLimitService.withdraw(withdrawDto);
     }
 
-    public void withdraw(WithdrawRequestDto withdrawRequestDto) {
-        UserDto userDto = findUser(withdrawRequestDto.userId());
+    @Transactional
+    public LimitReservationDto reservation(ReservationDto request) {
+        UserDto userDto = findUser(request.userId());
+        double totalReservation = userDto.reservedAmount() + request.amount();
 
-        if (withdrawRequestDto.amount() > userDto.currentLimit()) {
+        if (totalReservation > userDto.currentLimit()) {
             throw new LimitExceededException();
         }
+        userLimitService.save(new UserDto(userDto.userId(), userDto.currentLimit(), totalReservation));
 
-        UserEntity userEntity = new UserEntity();
+        LimitReservationDto limitReservationDto = new LimitReservationDto();
+        LocalDateTime expiresAt = LocalDateTime
+                .now()
+                .plusMinutes(applicationConfiguration.getReservationTimeoutMinutes());
 
-        userEntity.setUserId(withdrawRequestDto.userId());
-        userEntity.setCurrentLimit(userDto.currentLimit() - withdrawRequestDto.amount());
-        userEntity.setReservedAmount(userDto.reservedAmount());
+        limitReservationDto.setUserId(request.userId());
+        limitReservationDto.setExpiresAt(expiresAt);
+        limitReservationDto.setAmount(request.amount());
+        limitReservationDto.setStatus(LimitReservationStatus.RESERVED);
 
-        userRepository.save(userEntity);
+        return limitReservationsService.create(limitReservationDto);
     }
 }

@@ -19,3 +19,4 @@ flyway:
 
 limit-service:
   default-limit: 100000.00
+  reservation-timeout-minutes: 5

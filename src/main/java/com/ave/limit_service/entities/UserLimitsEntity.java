@@ -10,8 +10,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "users")
-public class UserEntity {
+@Table(name = "user_limits")
+public class UserLimitsEntity {
     @Id
     @Column(name = "user_id", unique = true, nullable = false)
     private String userId;

@@ -1,4 +1,4 @@
-package com.ave.limit_service.response;
+package com.ave.limit_service.dto;
 
 public record ErrorDto(String message) {
 }
